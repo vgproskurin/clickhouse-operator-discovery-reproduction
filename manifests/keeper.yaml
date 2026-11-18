@@ -1,0 +1,78 @@
+apiVersion: clickhouse-keeper.altinity.com/v1
+kind: ClickHouseKeeperInstallation
+metadata:
+  name: repro-keeper
+  namespace: keeper-discovery-repro
+  labels:
+    keeper-discovery-repro/fixture: "true"
+spec:
+  defaults:
+    templates:
+      dataVolumeClaimTemplate: data
+  configuration:
+    settings:
+      logger/level: warning
+      logger/console: "true"
+      keeper_server/four_letter_word_white_list: "*"
+      keeper_server/coordination_settings/session_timeout_ms: "30000"
+    clusters:
+      - name: keeper
+        layout:
+          replicas:
+            - name: "0"
+              templates:
+                podTemplate: keeper-fault
+            - name: "1"
+              templates:
+                podTemplate: keeper-control
+            - name: "2"
+              templates:
+                podTemplate: keeper-primary
+  templates:
+    podTemplates:
+      - name: keeper-fault
+        spec:
+          nodeSelector:
+            keeper-discovery-repro/role: fault
+          securityContext:
+            fsGroup: 101
+          containers:
+            - name: clickhouse-keeper
+              image: clickhouse/clickhouse-keeper:26.8.36.3-alpine
+              imagePullPolicy: IfNotPresent
+              resources:
+                requests: {cpu: 100m, memory: 128Mi}
+                limits: {cpu: "1", memory: 1Gi}
+      - name: keeper-control
+        spec:
+          nodeSelector:
+            keeper-discovery-repro/role: control
+          securityContext:
+            fsGroup: 101
+          containers:
+            - name: clickhouse-keeper
+              image: clickhouse/clickhouse-keeper:26.8.36.3-alpine
+              imagePullPolicy: IfNotPresent
+              resources:
+                requests: {cpu: 100m, memory: 128Mi}
+                limits: {cpu: "1", memory: 1Gi}
+      - name: keeper-primary
+        spec:
+          nodeSelector:
+            keeper-discovery-repro/role: primary
+          securityContext:
+            fsGroup: 101
+          containers:
+            - name: clickhouse-keeper
+              image: clickhouse/clickhouse-keeper:26.8.36.3-alpine
+              imagePullPolicy: IfNotPresent
+              resources:
+                requests: {cpu: 100m, memory: 128Mi}
+                limits: {cpu: "1", memory: 1Gi}
+    volumeClaimTemplates:
+      - name: data
+        spec:
+          accessModes: [ReadWriteOnce]
+          resources:
+            requests:
+              storage: 1Gi

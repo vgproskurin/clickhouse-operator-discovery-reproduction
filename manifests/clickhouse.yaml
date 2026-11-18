@@ -1,0 +1,68 @@
+apiVersion: clickhouse.altinity.com/v1
+kind: ClickHouseInstallation
+metadata:
+  name: repro
+  namespace: keeper-discovery-repro
+  labels:
+    keeper-discovery-repro/fixture: "true"
+spec:
+  defaults:
+    templates:
+      dataVolumeClaimTemplate: data
+  configuration:
+    zookeeper:
+      keeper:
+        name: repro-keeper
+        serviceType: replicas
+    settings:
+      logger/level: warning
+      logger/console: "true"
+      max_server_memory_usage: "1610612736"
+      mark_cache_size: "134217728"
+      uncompressed_cache_size: "67108864"
+    clusters:
+      - name: cluster
+        layout:
+          shardsCount: 1
+          replicas:
+            - name: "0"
+              templates:
+                podTemplate: clickhouse-primary
+            - name: "1"
+              templates:
+                podTemplate: clickhouse-fault
+  templates:
+    podTemplates:
+      - name: clickhouse-primary
+        spec:
+          nodeSelector:
+            keeper-discovery-repro/role: primary
+          securityContext:
+            fsGroup: 101
+          containers:
+            - name: clickhouse
+              image: clickhouse/clickhouse-server:26.8.36.3-alpine
+              imagePullPolicy: IfNotPresent
+              resources:
+                requests: {cpu: 250m, memory: 256Mi}
+                limits: {cpu: "2", memory: 2Gi}
+      - name: clickhouse-fault
+        spec:
+          nodeSelector:
+            keeper-discovery-repro/role: fault
+          securityContext:
+            fsGroup: 101
+          containers:
+            - name: clickhouse
+              image: clickhouse/clickhouse-server:26.8.36.3-alpine
+              imagePullPolicy: IfNotPresent
+              resources:
+                requests: {cpu: 250m, memory: 256Mi}
+                limits: {cpu: "2", memory: 2Gi}
+    volumeClaimTemplates:
+      - name: data
+        spec:
+          accessModes: [ReadWriteOnce]
+          resources:
+            requests:
+              storage: 2Gi

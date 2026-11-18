@@ -1,0 +1,24 @@
+# Helm chart: altinity-clickhouse-operator 0.27.4.
+# Override readyTimeout with --set for the fast run. 120 is the upstream default.
+watchNamespaces:
+  - keeper-discovery-repro
+nodeSelector:
+  keeper-discovery-repro/role: primary
+operator:
+  image:
+    repository: altinity/clickhouse-operator
+    tag: "0.27.4"
+    pullPolicy: IfNotPresent
+metrics:
+  enabled: false
+crdHook:
+  # Helm installs initial CRDs; skip the additional CRD update Job.
+  enabled: false
+configs:
+  files:
+    config.yaml:
+      reconcile:
+        coordination:
+          keeper:
+            readyTimeout: 120
+            onKeeperResourceUpdate: reconcile
